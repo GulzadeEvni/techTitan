@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sound Authenticity Checker</title>
+    <style>
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #E5E5E5;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.upload-box {
+    background-color: #FFF;
+    padding: 40px 50px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    width: 100%;
+    margin: 0 20px;
+    text-align: center;
+}
+
+.upload-box h2 {
+    font-size: 24px;
+    color: #333;
+    margin-bottom: 30px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.upload-box input[type=file] {
+    width: 100%;
+    padding: 15px;
+    margin-top: 20px;
+    border: 2px solid #007BFF;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.upload-box input[type="file"]::file-selector-button {
+    background-color: #007BFF;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    outline: none;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.upload-box input[type="file"]::file-selector-button:hover {
+    background-color: #0056b3;
+}
+
+.upload-box input[type=submit], 
+.upload-box button {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 8px;
+    margin-top: 20px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #fff;
+    background-color: #007BFF;
+    cursor: pointer;
+    outline: none;
+    transition: background-color 0.3s ease;
+}
+
+.upload-box input[type=submit]:hover, 
+.upload-box button:hover {
+    background-color: #0056b3;
+}
+
+.upload-box button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.result-box {
+    margin-top: 20px;
+    padding: 10px;
+    border-radius: 8px;
+    display: none; 
+    color: #333;
+    font-size: 18px;
+    border: 1px solid #ddd;
+}
+
+.real {
+    border-color: #28a745;
+    background-color: #c3e6cb;
+}
+
+.fake {
+    border-color: #dc3545;
+    background-color: #f5c6cb;
+}
+
+    </style>
+</head>
+<body>
+    <div class="upload-box">
+        <h2>Check if a sound is Real or Fake</h2>
+
+        <form id="upload-form" enctype="multipart/form-data">
+            <input type="file" name="file" accept="audio/*" required>
+            <input type="submit" value="Test">
+        </form>
+
+        <button id="startRecord">Kaydetmeye Başla</button>
+        <button id="stopRecord" disabled>Bitir ve Tahmin Et</button>
+
+        <div id="result" class="result-box"></div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+
+        document.getElementById('startRecord').addEventListener('click', () => {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.ondataavailable = e => {
+                        audioChunks.push(e.data);
+                    };
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        const formData = new FormData();
+                        formData.append("file", audioBlob, "recording.wav");
+
+                        fetch('/predict', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            var resultBox = document.getElementById('result');
+                            resultBox.className = 'result-box ' + (data.prediction === 'REAL' ? 'real' : 'fake');
+                            resultBox.textContent = data.prediction;
+                            resultBox.style.display = 'block';
+                        })
+                        .catch(error => console.error('Error:', error));
+                        
+                        audioChunks = [];
+                    };
+
+                    mediaRecorder.start();
+                    document.getElementById('stopRecord').disabled = false;
+                });
+        });
+
+        document.getElementById('stopRecord').addEventListener('click', () => {
+            mediaRecorder.stop();
+            document.getElementById('stopRecord').disabled = true;
+        });
+
+        document.getElementById('upload-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            var formData = new FormData(this);
+            fetch('/predict', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                var resultBox = document.getElementById('result');
+                resultBox.className = 'result-box ' + (data.prediction === 'REAL' ? 'real' : 'fake');
+                resultBox.textContent = data.prediction;
+                resultBox.style.display = 'block';
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    </script>
+</body>
+</html>

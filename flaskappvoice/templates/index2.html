@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sound Authenticity Checker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f8ff;
+            text-align: center;
+            padding: 50px;
+        }
+        .upload-box {
+            background-color: #e6f2ff;
+            border: 2px solid #a3c2c2;
+            border-radius: 10px;
+            padding: 20px;
+            display: inline-block;
+        }
+        .upload-box h2 {
+            color: #333366;
+        }
+        .upload-box input[type=file], .upload-box button {
+            margin: 10px 0;
+        }
+        .upload-box input[type=submit], .upload-box button {
+            background-color: #4d79ff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .upload-box input[type=submit]:hover, .upload-box button:hover {
+            background-color: #3366ff;
+        }
+        .result-box {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            color: white;
+            display: none; 
+        }
+        .real {
+            background-color: #4CAF50; 
+        }
+        .fake {
+            background-color: #f44336; 
+        }
+    </style>
+</head>
+<body>
+    <div class="upload-box">
+        <h2>Check if a sound is Real or Fake</h2>
+
+        <!-- Dosya Yükleme Bölümü -->
+        <form id="upload-form" enctype="multipart/form-data">
+            <input type="file" name="file" accept="audio/*" required>
+            <input type="submit" value="Test">
+        </form>
+
+        <!-- Ses Kaydı Bölümü -->
+        <button id="startRecord">Kaydetmeye Başla</button>
+        <button id="stopRecord" disabled>Bitir ve Tahmin Et</button>
+
+        <div id="result" class="result-box"></div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+
+        document.getElementById('startRecord').addEventListener('click', () => {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.ondataavailable = e => {
+                        audioChunks.push(e.data);
+                    };
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        const formData = new FormData();
+                        formData.append("file", audioBlob, "recording.wav");
+
+                        fetch('/predict', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            var resultBox = document.getElementById('result');
+                            resultBox.className = 'result-box ' + (data.prediction === 'REAL' ? 'real' : 'fake');
+                            resultBox.textContent = data.prediction;
+                            resultBox.style.display = 'block';
+                        })
+                        .catch(error => console.error('Error:', error));
+                        
+                        audioChunks = [];
+                    };
+
+                    mediaRecorder.start();
+                    document.getElementById('stopRecord').disabled = false;
+                });
+        });
+
+        document.getElementById('stopRecord').addEventListener('click', () => {
+            mediaRecorder.stop();
+            document.getElementById('stopRecord').disabled = true;
+        });
+
+        document.getElementById('upload-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            var formData = new FormData(this);
+            fetch('/predict', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                var resultBox = document.getElementById('result');
+                resultBox.className = 'result-box ' + (data.prediction === 'REAL' ? 'real' : 'fake');
+                resultBox.textContent = data.prediction;
+                resultBox.style.display = 'block';
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    </script>
+</body>
+</html>
