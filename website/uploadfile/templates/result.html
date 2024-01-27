@@ -1,0 +1,49 @@
+{% extends "form.html" %}
+
+{% block content %}
+
+<div class="container">
+    <div class="row main">
+        <div class="panel-heading">
+            <div class="panel-title text-center">
+                <h1 class="title">Sonuç</h1>
+                <hr />
+            </div>
+        </div> 
+        <div class="main-login main-center">
+            <table class="table">
+                <thead>
+                  <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Model</th>
+                    <th scope="col">Sınıf</th>
+                    <th scope="col">Sonuç</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th scope="row">1</th>
+                    <td>BLSTM</td>
+                    <td>{{blstm_predict_class}}</td>
+                    <td>{{blstm_result_number}}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">2</th>
+                    <td>CNN</td>
+                    <td>{{cnn_predict_class}}</td>
+                    <td>{{cnn_result_number}}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">3</th>
+                    <td>LSTM</td>
+                    <td>{{lstm_predict_class}}</td>
+                    <td>{{lstm_result_number}}</td>
+                  </tr>
+                </tbody>
+              </table>
+        </div>
+    </div>
+</div>  
+
+
+{% endblock %}
